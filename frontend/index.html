@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OCT — Mimecast Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+/* =====================
+   DESIGN TOKENS
+===================== */
+:root {
+  --bg:         #F5F6F8;
+  --surface:    #FFFFFF;
+  --border:     #E4E6EA;
+  --border-2:   #CDD0D8;
+  --text-1:     #0F1117;
+  --text-2:     #4B5563;
+  --text-3:     #9CA3AF;
+  --accent:     #2563EB;
+  --accent-lt:  #EFF4FF;
+  --accent-dk:  #1D4ED8;
+  --ok:         #15803D;
+  --ok-lt:      #F0FDF4;
+  --ok-bd:      #BBF7D0;
+  --warn:       #B45309;
+  --warn-lt:    #FFFBEB;
+  --warn-bd:    #FDE68A;
+  --danger:     #DC2626;
+  --danger-lt:  #FEF2F2;
+  --danger-bd:  #FECACA;
+  --partial:    #7C3AED;
+  --partial-lt: #F5F3FF;
+  --partial-bd: #DDD6FE;
+  --mono:       'JetBrains Mono', monospace;
+  --sans:       'Inter', system-ui, sans-serif;
+  --r:          8px;
+  --sh:         0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --sh-md:      0 4px 16px rgba(0,0,0,.09);
+}
+
+/* =====================
+   RESET
+===================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text-1);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+}
+
+/* =====================
+   HEADER
+===================== */
+.app-header {
+  height: 54px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 22px;
+  gap: 10px;
+  flex-shrink: 0;
+  position: sticky; top: 0; z-index: 200;
+}
+.header-logo {
+  width: 30px; height: 30px;
+  background: var(--accent);
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.header-logo svg { color: #fff; }
+.header-title {
+  font-size: 14px; font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+}
+.header-org {
+  font-size: 11px; font-weight: 500;
+  background: var(--accent-lt);
+  color: var(--accent);
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+.header-right {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 14px;
+}
+.conn-pill {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11.5px; color: var(--text-3);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 99px;
+}
+.conn-pill .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--border-2);
+  transition: background .3s;
+  flex-shrink: 0;
+}
+.conn-pill .dot.ok   { background: #22c55e; }
+.conn-pill .dot.err  { background: var(--danger); }
+
+/* =====================
+   LAYOUT
+===================== */
+.app-body {
+  display: grid;
+  grid-template-columns: 268px 1fr;
+  flex: 1;
+  min-height: 0;
+}
+
+/* =====================
+   SIDEBAR
+===================== */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 18px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.sidebar-section { display: flex; flex-direction: column; gap: 10px; }
+.sidebar-label {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: .09em; text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 2px;
+}
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label {
+  font-size: 11.5px; font-weight: 500; color: var(--text-2);
+}
+.field input, .field select {
+  width: 100%; height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  font-family: var(--sans); font-size: 13px;
+  color: var(--text-1); background: var(--bg);
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.field input::placeholder { color: var(--text-3); font-family: var(--sans); }
+.field input:focus, .field select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+  background: var(--surface);
+}
+.field input.mono { font-family: var(--mono); font-size: 12px; }
+.field input[type="password"] { letter-spacing: .06em; }
+.field input[type="date"] { font-family: var(--sans); }
+
+.date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.divider { border: none; border-top: 1px solid var(--border); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 34px; padding: 0 14px;
+  border: none; border-radius: var(--r);
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  cursor: pointer; user-select: none;
+  transition: background .15s, opacity .15s, transform .1s;
+}
+.btn:active  { transform: scale(0.98); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: #fff; width: 100%; }
+.btn-primary:hover:not(:disabled) { background: var(--accent-dk); }
+.btn-ghost   { background: transparent; color: var(--text-2); border: 1px solid var(--border); width: 100%; }
+.btn-ghost:hover:not(:disabled) { background: var(--bg); }
+
+.sidebar-footer { margin-top: auto; }
+
+/* =====================
+   MAIN AREA
+===================== */
+.main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Search strip */
+.search-strip {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex; gap: 10px; align-items: center;
+  flex-shrink: 0;
+}
+.search-wrap { position: relative; flex: 1; }
+.search-wrap .search-ico {
+  position: absolute; left: 10px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-3); pointer-events: none;
+}
+.search-wrap input {
+  width: 100%; height: 36px;
+  padding: 0 12px 0 34px;
+  border: 1px solid var(--border); border-radius: var(--r);
+  font-family: var(--mono); font-size: 13px;
+  color: var(--text-1); background: var(--bg);
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.search-wrap input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+  background: var(--surface);
+}
+.search-wrap input::placeholder { font-family: var(--sans); color: var(--text-3); }
+
+.btn-search {
+  height: 36px; padding: 0 18px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: var(--r);
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  white-space: nowrap; flex-shrink: 0;
+  transition: background .15s, transform .1s;
+}
+.btn-search:hover  { background: var(--accent-dk); }
+.btn-search:active { transform: scale(0.98); }
+.btn-search:disabled { opacity: .5; cursor: not-allowed; }
+
+/* =====================
+   CONTENT SPLIT
+===================== */
+.content-split {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* =====================
+   EMAIL LIST PANEL
+===================== */
+.list-panel {
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.list-header {
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.list-header h2 { font-size: 12.5px; font-weight: 600; }
+.count-badge {
+  background: var(--accent-lt); color: var(--accent);
+  font-size: 11px; font-weight: 600;
+  padding: 2px 8px; border-radius: 99px;
+}
+.list-scroll { overflow-y: auto; flex: 1; padding: 8px; }
+
+/* Email row */
+.email-row {
+  padding: 10px 12px;
+  border-radius: var(--r);
+  border: 1px solid transparent;
+  cursor: pointer; margin-bottom: 3px;
+  transition: background .1s, border-color .1s;
+}
+.email-row:hover  { background: var(--bg); border-color: var(--border); }
+.email-row.active { background: var(--accent-lt); border-color: #BFDBFE; }
+.email-row .er-subject {
+  font-size: 13px; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+.email-row .er-meta {
+  display: flex; gap: 8px; align-items: center;
+  font-size: 11.5px; color: var(--text-3);
+}
+.email-row .er-from {
+  font-family: var(--mono); font-size: 11px; color: var(--text-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 240px;
+}
+.email-row .er-date { margin-left: auto; white-space: nowrap; flex-shrink: 0; }
+
+/* =====================
+   DETAIL PANEL
+===================== */
+.detail-panel {
+  overflow-y: auto;
+  background: var(--surface);
+}
+.detail-empty {
+  height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px; padding: 32px; text-align: center;
+  color: var(--text-3);
+}
+.detail-empty svg { opacity: .25; }
+.detail-empty p { font-size: 13px; line-height: 1.5; max-width: 220px; }
+
+.detail-body { padding: 18px 16px; }
+.detail-subject {
+  font-size: 14px; font-weight: 600; line-height: 1.4;
+  color: var(--text-1); margin-bottom: 16px;
+}
+
+/* Security badges */
+.auth-row {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px; margin-bottom: 14px;
+}
+.auth-card {
+  border-radius: var(--r); padding: 11px 12px;
+  border: 1px solid var(--border);
+}
+.auth-card .ac-label {
+  font-size: 10px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; margin-bottom: 5px;
+}
+.auth-card .ac-val {
+  font-size: 13px; font-weight: 700; font-family: var(--mono);
+}
+.auth-card .ac-domain {
+  font-size: 10.5px; color: var(--text-3); margin-top: 4px;
+  font-family: var(--mono); word-break: break-all;
+}
+.auth-card .ac-match {
+  font-size: 10px; font-weight: 600; margin-top: 3px;
+}
+.auth-card.pass {
+  background: var(--ok-lt); border-color: var(--ok-bd);
+}
+.auth-card.pass .ac-label { color: #166534; }
+.auth-card.pass .ac-val   { color: var(--ok); }
+.auth-card.pass .ac-match { color: var(--ok); }
+.auth-card.fail {
+  background: var(--danger-lt); border-color: var(--danger-bd);
+}
+.auth-card.fail .ac-label { color: #991b1b; }
+.auth-card.fail .ac-val   { color: var(--danger); }
+.auth-card.fail .ac-match { color: var(--danger); }
+.auth-card.warn {
+  background: var(--warn-lt); border-color: var(--warn-bd);
+}
+.auth-card.warn .ac-label { color: #92400e; }
+.auth-card.warn .ac-val   { color: var(--warn); }
+.auth-card.warn .ac-match { color: var(--warn); }
+.auth-card.unknown {
+  background: var(--bg); border-color: var(--border);
+}
+.auth-card.unknown .ac-label { color: var(--text-3); }
+.auth-card.unknown .ac-val   { color: var(--text-2); }
+
+/* Verdict banner */
+.verdict {
+  display: flex; align-items: center; gap: 12px;
+  border-radius: var(--r); padding: 12px 14px;
+  margin-bottom: 14px; border: 1px solid;
+}
+.verdict.safe    { background: var(--ok-lt);      border-color: var(--ok-bd);      }
+.verdict.failed  { background: var(--danger-lt);  border-color: var(--danger-bd);  }
+.verdict.partial { background: var(--partial-lt); border-color: var(--partial-bd); }
+.verdict.unknown { background: var(--bg);         border-color: var(--border);     }
+.verdict-icon { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; }
+.verdict.safe    .verdict-icon { background: var(--ok);      color: #fff; }
+.verdict.failed  .verdict-icon { background: var(--danger);  color: #fff; }
+.verdict.partial .verdict-icon { background: var(--partial); color: #fff; }
+.verdict.unknown .verdict-icon { background: var(--text-3);  color: #fff; }
+.verdict-text .vt-label {
+  font-size: 11px; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.verdict-text .vt-val {
+  font-size: 15px; font-weight: 700;
+}
+.verdict.safe    .vt-val { color: var(--ok); }
+.verdict.failed  .vt-val { color: var(--danger); }
+.verdict.partial .vt-val { color: var(--partial); }
+.verdict.unknown .vt-val { color: var(--text-2); }
+
+/* Section title */
+.sec-title {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text-3);
+  margin: 16px 0 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Info grid */
+.info-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 7px; margin-bottom: 4px;
+}
+.info-cell {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 9px 11px;
+}
+.info-cell .ic-label {
+  font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--text-3); margin-bottom: 4px;
+}
+.info-cell .ic-val {
+  font-size: 12.5px; font-weight: 500; color: var(--text-1);
+  word-break: break-all; line-height: 1.4;
+}
+.info-cell .ic-val.mono { font-family: var(--mono); font-size: 11.5px; }
+
+/* Transmission headers */
+.tx-block {
+  background: #0F1117; color: #E5E7EB;
+  border-radius: var(--r); padding: 12px 14px;
+  font-family: var(--mono); font-size: 11px; line-height: 1.7;
+  white-space: pre-wrap; word-break: break-all;
+  max-height: 280px; overflow-y: auto;
+}
+/* Highlight auth keywords */
+.tx-block .hl-pass  { color: #4ade80; font-weight: 600; }
+.tx-block .hl-fail  { color: #f87171; font-weight: 600; }
+.tx-block .hl-none  { color: #fbbf24; font-weight: 600; }
+.tx-block .hl-key   { color: #93c5fd; }
+
+/* Raw JSON toggle */
+.raw-toggle {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11.5px; color: var(--accent);
+  background: none; border: none; cursor: pointer;
+  font-family: var(--sans); padding: 0; margin-top: 6px;
+}
+.raw-toggle:hover { text-decoration: underline; }
+.raw-block {
+  display: none; margin-top: 8px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 12px;
+  font-family: var(--mono); font-size: 11px;
+  color: var(--text-2); line-height: 1.6;
+  white-space: pre-wrap; max-height: 260px; overflow-y: auto;
+}
+.raw-block.open { display: block; }
+
+/* =====================
+   EMPTY / LOADING STATES
+===================== */
+.empty-state {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 50px 20px; gap: 10px;
+  color: var(--text-3); text-align: center;
+}
+.empty-state svg { opacity: .2; margin-bottom: 4px; }
+.empty-state h3 { font-size: 14px; font-weight: 600; color: var(--text-2); }
+.empty-state p  { font-size: 12.5px; max-width: 260px; line-height: 1.5; }
+.list-loading {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; padding: 40px; color: var(--text-3); font-size: 13px;
+}
+
+/* =====================
+   SPINNER
+===================== */
+.spinner {
+  width: 15px; height: 15px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .5s linear infinite;
+  flex-shrink: 0;
+}
+.spinner.dark {
+  border-color: var(--border); border-top-color: var(--accent);
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* =====================
+   TOAST
+===================== */
+.toast-wrap {
+  position: fixed; bottom: 18px; right: 18px;
+  display: flex; flex-direction: column; gap: 8px; z-index: 999;
+}
+.toast {
+  min-width: 250px; max-width: 340px;
+  background: var(--text-1); color: #fff;
+  padding: 10px 14px; border-radius: var(--r);
+  font-size: 12.5px; box-shadow: var(--sh-md);
+  display: flex; align-items: center; gap: 9px;
+  animation: toastIn .18s ease;
+}
+.toast.ok   { background: var(--ok); }
+.toast.err  { background: var(--danger); }
+.toast.warn { background: var(--warn); }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* =====================
+   FOOTER
+===================== */
+.app-footer {
+  text-align: center; padding: 14px;
+  font-size: 11.5px; color: var(--text-3);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="header-logo">
+    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
+    </svg>
+  </div>
+  <span class="header-title">Mimecast Analyzer</span>
+  <span class="header-org">OCT</span>
+  <div class="header-right">
+    <div class="conn-pill">
+      <div class="dot" id="connDot"></div>
+      <span id="connLabel">Disconnected</span>
+    </div>
+  </div>
+</header>
+
+<!-- BODY -->
+<div class="app-body">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Credentials</div>
+      <div class="field">
+        <label>Client ID</label>
+        <input id="clientId" class="mono" placeholder="mimecast-client-id" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Client Secret</label>
+        <input id="clientSecret" type="password" placeholder="••••••••••••">
+      </div>
+      <div class="field">
+        <label>Region</label>
+        <select id="baseUrl">
+          <option value="https://api.services.mimecast.com">Global (US)</option>
+          <option value="https://uk-api.services.mimecast.com">UK</option>
+          <option value="https://de-api.services.mimecast.com">Germany</option>
+          <option value="https://za-api.services.mimecast.com">South Africa</option>
+          <option value="https://au-api.services.mimecast.com">Australia</option>
+          <option value="https://ca-api.services.mimecast.com">Canada</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="connectBtn" onclick="connect()">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
+        </svg>
+        Connect
+      </button>
+    </div>
+
+    <hr class="divider">
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Date Range</div>
+      <div class="date-row">
+        <div class="field">
+          <label>From</label>
+          <input type="date" id="dateStart">
+        </div>
+        <div class="field">
+          <label>To</label>
+          <input type="date" id="dateEnd">
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Results</div>
+      <div class="field">
+        <label>Page size</label>
+        <select id="pageSize">
+          <option value="10">10</option>
+          <option value="25" selected>25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <hr class="divider" style="margin-bottom:12px">
+      <button class="btn btn-ghost" onclick="clearAll()">
+        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+        </svg>
+        Clear all
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- SEARCH STRIP -->
+    <div class="search-strip">
+      <div class="search-wrap">
+        <svg class="search-ico" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+        </svg>
+        <input id="searchInput" placeholder="vendor-domain.com" onkeydown="if(event.key==='Enter') doSearch()">
+      </div>
+      <button class="btn-search" id="searchBtn" onclick="doSearch()">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+        </svg>
+        Search
+      </button>
+    </div>
+
+    <!-- CONTENT SPLIT -->
+    <div class="content-split">
+
+      <!-- EMAIL LIST -->
+      <div class="list-panel">
+        <div class="list-header">
+          <h2>Messages</h2>
+          <span class="count-badge" id="countBadge" style="display:none">0</span>
+        </div>
+        <div class="list-scroll" id="listScroll">
+          <div class="empty-state">
+            <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.3" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/>
+            </svg>
+            <h3>No messages</h3>
+            <p>Connect credentials then search a sender domain.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- DETAIL PANEL -->
+      <div class="detail-panel" id="detailPanel">
+        <div class="detail-empty" id="detailEmpty">
+          <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.3" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+          </svg>
+          <p>Select a message to inspect authentication results and headers.</p>
+        </div>
+        <div id="detailContent" style="display:none"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="app-footer">
+  &copy; 2026 OCT — Email Security Analyzer &nbsp;·&nbsp; Developed by Raghu Sattu
+</footer>
+
+<!-- TOASTS -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* =====================
+   STATE
+===================== */
+const S = {
+  token:   null,
+  creds:   {},
+  emails:  [],
+  activeId: null,
+};
+
+const API = "http://localhost:5000";
+
+/* =====================
+   INIT
+===================== */
+(function init() {
+  // Default date range: last 7 days
+  const now  = new Date();
+  const past = new Date(Date.now() - 7 * 86400000);
+  document.getElementById("dateEnd").value   = now.toISOString().split("T")[0];
+  document.getElementById("dateStart").value = past.toISOString().split("T")[0];
+
+  // Restore saved config (no secret — don't persist sensitive data in production)
+  try {
+    const cfg = JSON.parse(localStorage.getItem("oct_mimecast_cfg") || "{}");
+    if (cfg.clientId)  document.getElementById("clientId").value  = cfg.clientId;
+    if (cfg.baseUrl)   document.getElementById("baseUrl").value   = cfg.baseUrl;
+    if (cfg.domain)    document.getElementById("searchInput").value = cfg.domain;
+    if (cfg.dateStart) document.getElementById("dateStart").value = cfg.dateStart;
+    if (cfg.dateEnd)   document.getElementById("dateEnd").value   = cfg.dateEnd;
+  } catch(_) {}
+})();
+
+function saveConfig() {
+  try {
+    localStorage.setItem("oct_mimecast_cfg", JSON.stringify({
+      clientId:  document.getElementById("clientId").value,
+      baseUrl:   document.getElementById("baseUrl").value,
+      domain:    document.getElementById("searchInput").value,
+      dateStart: document.getElementById("dateStart").value,
+      dateEnd:   document.getElementById("dateEnd").value,
+    }));
+  } catch(_) {}
+}
+
+/* =====================
+   TOAST
+===================== */
+function toast(msg, type = "info", ms = 4000) {
+  const icons = {
+    ok:   '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+    err:  '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>',
+    warn: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/>',
+    info: '<path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>',
+  };
+  const cls = type === "ok" ? "ok" : type === "err" ? "err" : type === "warn" ? "warn" : "";
+  const el = document.createElement("div");
+  el.className = `toast ${cls}`;
+  el.innerHTML = `
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="flex-shrink:0">${icons[type] || icons.info}</svg>
+    <span>${msg}</span>`;
+  document.getElementById("toastWrap").appendChild(el);
+  setTimeout(() => el.remove(), ms);
+}
+
+/* =====================
+   CONNECTION STATUS
+===================== */
+function setConnected(ok) {
+  document.getElementById("connDot").className   = `dot ${ok ? "ok" : "err"}`;
+  document.getElementById("connLabel").textContent = ok ? "Connected" : "Disconnected";
+}
+
+/* =====================
+   CONNECT
+===================== */
+async function connect() {
+  const btn = document.getElementById("connectBtn");
+  const clientId     = document.getElementById("clientId").value.trim();
+  const clientSecret = document.getElementById("clientSecret").value.trim();
+  const baseUrl      = document.getElementById("baseUrl").value;
+
+  if (!clientId || !clientSecret) {
+    toast("Enter Client ID and Client Secret.", "warn");
+    return;
+  }
+
+  S.creds = { clientId, clientSecret, baseUrl };
+  saveConfig();
+
+  btn.disabled = true;
+  btn.innerHTML = `<div class="spinner"></div> Connecting…`;
+
+  try {
+    const r = await fetch(API + "/api/token", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(S.creds),
+    });
+    const d = await r.json();
+    if (!d.access_token) throw new Error(d.error || "No token returned");
+    S.token = d.access_token;
+    setConnected(true);
+    toast("Connected to Mimecast.", "ok");
+  } catch (e) {
+    setConnected(false);
+    toast(`Connection failed: ${e.message}`, "err");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
+      </svg>
+      Connect`;
+  }
+}
+
+/* =====================
+   SEARCH
+===================== */
+async function doSearch() {
+  const domain = document.getElementById("searchInput").value.trim();
+  if (!domain)    { toast("Enter a sender domain.", "warn"); return; }
+  if (!S.token)   { toast("Connect first.", "warn"); return; }
+
+  const btn = document.getElementById("searchBtn");
+  btn.disabled = true;
+  btn.innerHTML = `<div class="spinner"></div> Searching…`;
+
+  const startDate = document.getElementById("dateStart").value;
+  const endDate   = document.getElementById("dateEnd").value;
+  saveConfig();
+
+  document.getElementById("listScroll").innerHTML = `
+    <div class="list-loading">
+      <div class="spinner dark"></div>
+      Searching ${domain}…
+    </div>`;
+  document.getElementById("detailContent").style.display = "none";
+  document.getElementById("detailEmpty").style.display   = "flex";
+  document.getElementById("countBadge").style.display    = "none";
+  S.activeId = null;
+
+  try {
+    const r = await fetch(API + "/api/search", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        token:    S.token,
+        baseUrl:  S.creds.baseUrl || document.getElementById("baseUrl").value,
+        value:    domain,
+        start:    startDate,  // backend converts YYYY-MM-DD → Mimecast ISO
+        end:      endDate,
+        pageSize: document.getElementById("pageSize").value,
+      }),
+    });
+
+    const data = await r.json();
+    if (data.error) throw new Error(data.error);
+
+    S.emails = data.trackedEmails || [];
+
+    if (S.emails.length === 0) {
+      document.getElementById("listScroll").innerHTML = `
+        <div class="empty-state">
+          <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.3" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/>
+          </svg>
+          <h3>No messages found</h3>
+          <p>No emails from <strong>${domain}</strong> in this date range.</p>
+        </div>`;
+    } else {
+      renderList(S.emails);
+      const badge = document.getElementById("countBadge");
+      badge.textContent = S.emails.length;
+      badge.style.display = "inline-flex";
+      toast(`Found ${S.emails.length} message${S.emails.length !== 1 ? "s" : ""}.`, "ok");
+    }
+  } catch(e) {
+    document.getElementById("listScroll").innerHTML = `
+      <div class="empty-state">
+        <h3>Search failed</h3>
+        <p>${e.message}</p>
+      </div>`;
+    toast(`Search failed: ${e.message}`, "err");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+      </svg>
+      Search`;
+  }
+}
+
+/* =====================
+   RENDER LIST
+===================== */
+function renderList(emails) {
+  const scroll = document.getElementById("listScroll");
+  scroll.innerHTML = "";
+
+  emails.forEach(e => {
+    const from = e?.fromEnv?.emailAddress
+      || (typeof e?.fromEnv === "string" ? e.fromEnv : null)
+      || e?.fromHdr?.emailAddress
+      || e?.from || "Unknown sender";
+
+    const subject = e?.subject || "(No Subject)";
+    const ts = e?.received || e?.sent || e?.timestamp;
+    const dateStr = ts
+      ? new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+      : "";
+
+    const row = document.createElement("div");
+    row.className = "email-row";
+    row.dataset.id = e?.id;
+    row.innerHTML = `
+      <div class="er-subject" title="${subject}">${subject}</div>
+      <div class="er-meta">
+        <span class="er-from" title="${from}">${from}</span>
+        ${dateStr ? `<span class="er-date">${dateStr}</span>` : ""}
+      </div>`;
+    row.onclick = () => loadDetail(e?.id, row);
+    scroll.appendChild(row);
+  });
+}
+
+/* =====================
+   LOAD DETAIL
+===================== */
+async function loadDetail(id, rowEl) {
+  if (!id) { toast("This message has no ID.", "warn"); return; }
+  if (S.activeId === id) return;
+  S.activeId = id;
+
+  document.querySelectorAll(".email-row").forEach(r => r.classList.remove("active"));
+  rowEl.classList.add("active");
+
+  const dc = document.getElementById("detailContent");
+  const de = document.getElementById("detailEmpty");
+  de.style.display = "none";
+  dc.style.display = "block";
+  dc.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:50px;color:var(--text-3);font-size:13px;">
+      <div class="spinner dark"></div> Loading details…
+    </div>`;
+
+  try {
+    // Always get a fresh token before detail call
+    const tokenRes = await fetch(API + "/api/token", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(S.creds),
+    });
+    const tokenData = await tokenRes.json();
+    if (!tokenData.access_token) throw new Error("Token refresh failed");
+    S.token = tokenData.access_token;
+
+    const r = await fetch(API + "/api/message-info", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        token:   S.token,
+        baseUrl: S.creds.baseUrl || document.getElementById("baseUrl").value,
+        id,
+      }),
+    });
+
+    const data = await r.json();
+    if (!r.ok || data.error) throw new Error(data.error || `HTTP ${r.status}`);
+    if (!data.messageInfo) throw new Error("No message data returned.");
+
+    renderDetail(data, id);
+  } catch(e) {
+    dc.innerHTML = `
+      <div class="detail-body">
+        <div style="background:var(--danger-lt);border:1px solid var(--danger-bd);border-radius:var(--r);padding:14px;color:var(--danger);font-size:13px;">
+          <strong>Failed to load details</strong><br>
+          <span style="color:var(--text-2);font-size:12px;display:block;margin-top:4px;">${e.message}</span>
+        </div>
+      </div>`;
+    toast(`Detail load failed: ${e.message}`, "err");
+  }
+}
+
+/* =====================
+   RENDER DETAIL
+===================== */
+function renderDetail(data, id) {
+  const msg  = data.messageInfo || {};
+  const sec  = data.security    || {};
+
+  const subject   = msg.subject    || "(No Subject)";
+  const fromHdr   = msg.fromHeader || msg.from || "—";
+  // Fix: msg.to is an array of objects like [{emailAddress:"...",...}]
+  const toRaw     = msg.to;
+  const toStr     = Array.isArray(toRaw)
+    ? toRaw.map(t => t?.emailAddress || t?.address || String(t)).filter(Boolean).join(", ")
+    : (toRaw || "—");
+
+  const sent      = msg.sent ? new Date(msg.sent).toLocaleString() : (msg.timestamp ? new Date(msg.timestamp).toLocaleString() : "—");
+  const size      = msg.size ? `${Math.round(msg.size / 1024)} KB` : "—";
+  const direction = msg.direction || "—";
+  const status    = msg.processingStatus || msg.status || "—";
+  const transmission = msg.transmissionInfo || "";
+
+  // Auth cards
+  function authCard(label, result, domain, domainMatch) {
+    const norm = result === "pass" ? "pass"
+               : result === "fail" ? "fail"
+               : result ? "warn"
+               : "unknown";
+    const val  = result ? result.toUpperCase() : "N/A";
+    const matchText = domain
+      ? (domainMatch ? `✓ ${domain}` : `✗ ${domain}`)
+      : "";
+    return `
+      <div class="auth-card ${norm}">
+        <div class="ac-label">${label}</div>
+        <div class="ac-val">${val}</div>
+        ${domain ? `<div class="ac-domain">${domain}</div>` : ""}
+        ${matchText ? `<div class="ac-match">${matchText}</div>` : ""}
+      </div>`;
+  }
+
+  // Verdict
+  const vClass = sec.finalStatus === "SAFE"    ? "safe"
+               : sec.finalStatus === "PARTIAL" ? "partial"
+               : sec.finalStatus === "FAILED"  ? "failed"
+               : "unknown";
+  const vIcons = {
+    safe:    '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+    failed:  '<path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+    partial: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/>',
+    unknown: '<path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/>',
+  };
+
+  // Highlight transmission info
+  function highlightTx(tx) {
+    if (!tx) return "No transmission data.";
+    return tx
+      .replace(/\b(pass)\b/gi, '<span class="hl-pass">$1</span>')
+      .replace(/\b(fail|softfail)\b/gi, '<span class="hl-fail">$1</span>')
+      .replace(/\b(none|neutral)\b/gi, '<span class="hl-none">$1</span>')
+      .replace(/(spf|dkim|dmarc|Authentication-Results|Received-SPF)(\s*[=:])/gi, '<span class="hl-key">$1</span>$2');
+  }
+
+  const dc = document.getElementById("detailContent");
+  dc.innerHTML = `
+  <div class="detail-body">
+
+    <div class="detail-subject">${subject}</div>
+
+    <!-- Verdict -->
+    <div class="verdict ${vClass}">
+      <div class="verdict-icon">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          ${vIcons[vClass] || vIcons.unknown}
+        </svg>
+      </div>
+      <div class="verdict-text">
+        <div class="vt-label">Overall Verdict</div>
+        <div class="vt-val">${sec.finalStatus || "UNKNOWN"}</div>
+      </div>
+    </div>
+
+    <!-- Auth row -->
+    <div class="auth-row">
+      ${authCard("SPF",   sec.spf,   sec.spfDomain,   sec.spfDomainMatch)}
+      ${authCard("DKIM",  sec.dkim,  sec.dkimDomain,  sec.dkimDomainMatch)}
+      ${authCard("DMARC", sec.dmarc, sec.dmarcDomain,  sec.dmarcDomainMatch)}
+    </div>
+
+    <!-- Message metadata -->
+    <div class="sec-title">Message Details</div>
+    <div class="info-grid">
+      <div class="info-cell">
+        <div class="ic-label">From</div>
+        <div class="ic-val mono">${fromHdr}</div>
+      </div>
+      <div class="info-cell">
+        <div class="ic-label">To</div>
+        <div class="ic-val mono">${toStr}</div>
+      </div>
+      <div class="info-cell">
+        <div class="ic-label">Sender Domain</div>
+        <div class="ic-val mono">${sec.senderDomain || "—"}</div>
+      </div>
+      <div class="info-cell">
+        <div class="ic-label">Sent</div>
+        <div class="ic-val">${sent}</div>
+      </div>
+      <div class="info-cell">
+        <div class="ic-label">Direction</div>
+        <div class="ic-val">${direction}</div>
+      </div>
+      <div class="info-cell">
+        <div class="ic-label">Size</div>
+        <div class="ic-val">${size}</div>
+      </div>
+    </div>
+
+    <!-- Transmission headers -->
+    ${transmission ? `
+    <div class="sec-title">Authentication Headers</div>
+    <div class="tx-block">${highlightTx(transmission)}</div>
+    ` : ""}
+
+    <!-- Raw JSON -->
+    <div class="sec-title">Raw Response</div>
+    <button class="raw-toggle" onclick="this.nextElementSibling.classList.toggle('open'); this.textContent = this.nextElementSibling.classList.contains('open') ? '▲ Hide raw JSON' : '▼ Show raw JSON';">
+      ▼ Show raw JSON
+    </button>
+    <div class="raw-block">${JSON.stringify(data, null, 2)}</div>
+
+  </div>`;
+}
+
+/* =====================
+   CLEAR ALL
+===================== */
+function clearAll() {
+  S.token = null; S.emails = []; S.activeId = null; S.creds = {};
+  setConnected(false);
+  document.getElementById("clientId").value = "";
+  document.getElementById("clientSecret").value = "";
+  document.getElementById("searchInput").value = "";
+  document.getElementById("listScroll").innerHTML = `
+    <div class="empty-state">
+      <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.3" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/>
+      </svg>
+      <h3>No messages</h3>
+      <p>Connect credentials then search a sender domain.</p>
+    </div>`;
+  document.getElementById("detailContent").style.display = "none";
+  document.getElementById("detailEmpty").style.display   = "flex";
+  document.getElementById("countBadge").style.display    = "none";
+  localStorage.removeItem("oct_mimecast_cfg");
+  toast("Cleared.", "info");
+}
+</script>
+</body>
+</html>
