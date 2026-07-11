@@ -4,6 +4,7 @@ from flask_cors import CORS
 import time
 import re
 import logging
+import os
 
 # ===========================
 # SETUP
@@ -15,7 +16,20 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)
+
+# ===========================
+# CORS CONFIGURATION
+# ===========================
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "expose_headers": ["Content-Type"],
+        "supports_credentials": False,
+        "max_age": 3600
+    }
+})
 
 # ===========================
 # TOKEN CACHE
@@ -56,8 +70,11 @@ def _to_mimecast_date(date_str, end_of_day=False):
 # GET TOKEN
 # ===========================
 
-@app.route("/api/token", methods=["POST"])
+@app.route("/api/token", methods=["POST", "OPTIONS"])
 def get_token():
+    if request.method == "OPTIONS":
+        return "", 204
+    
     data = request.json or {}
     client_id     = data.get("clientId")
     client_secret = data.get("clientSecret")
@@ -179,8 +196,11 @@ def analyze_security(transmission: str, from_header: str) -> dict:
 # SEARCH  (returns all tracked emails, not just one)
 # ===========================
 
-@app.route("/api/search", methods=["POST"])
+@app.route("/api/search", methods=["POST", "OPTIONS"])
 def search():
+    if request.method == "OPTIONS":
+        return "", 204
+    
     data     = request.json or {}
     token    = data.get("token")
     base_url = _base_url(data)
@@ -242,8 +262,11 @@ def search():
 # GET MESSAGE INFO  (fixed + guarded)
 # ===========================
 
-@app.route("/api/message-info", methods=["POST"])
+@app.route("/api/message-info", methods=["POST", "OPTIONS"])
 def message_info():
+    if request.method == "OPTIONS":
+        return "", 204
+    
     data     = request.json or {}
     token    = data.get("token")
     base_url = _base_url(data)
@@ -310,4 +333,8 @@ def home():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # Production: disable debug mode, use environment variable for port
+    port = int(os.environ.get("PORT", 5000))
+    debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=port, debug=debug)
+
